@@ -1,0 +1,363 @@
+import pandas as pd
+import dash_core_components as dcc
+import plotly.express as px
+import dash
+import dash_html_components as html
+import pyodbc
+import dash_core_components as dcc
+import plotly.graph_objs as go
+import matplotlib.pyplot as plt
+import numpy as np
+from plotly.subplots import make_subplots
+
+
+server = '007-KOMPUTER\SERVER007'
+database = 'master'
+username = 'sa'
+password = 'Admin1234'
+cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
+cursor = cnxn.cursor()
+
+
+
+
+
+
+#app = dash.Dash(r"C:\Users\007\PycharmProjects\pythonProject")  # the name of the folder containing your code and static folder.
+#app.css.append_css({'external_url': "\css.css"})
+
+
+
+
+
+
+# Initialise the app
+app = dash.Dash(__name__)
+
+
+
+colors = {
+    'background': 'rgb(20,40,35)',
+    'text': '#ffffff'
+}
+
+
+
+
+
+
+df = pd.read_sql('SELECT CONVERT(int,month) as month,sum(CONVERT(int, revenue)) as revenue FROM master.dbo.Sales_data group by month order by CONVERT(int,month)',cnxn)
+df_month=df['month']
+df_revenue=df['revenue']
+
+df2 = pd.read_sql('SELECT CONVERT(int,month) as month,sum(CONVERT(int, customer_volume)) as customer_volume,sum(CONVERT(int, revenue)) as revenue,sum(CONVERT(int, revenue)) fROM master.dbo.Sales_data group by CONVERT(int,month)   order by month',cnxn)
+df2_month=df2['month']
+df2_customer_volume=df2['customer_volume']
+df2_arpu=(df2['revenue']/df2['customer_volume'])
+# Create figure with secondary y-axis
+df2_fig = make_subplots(specs=[[{"secondary_y": True }]])
+# Add traces
+df2_fig.add_trace(go.Bar(x=df2['month'], y=df2['customer_volume'], name="yaxis data"),secondary_y=False,)
+df2_fig.add_trace(go.Scatter(x=df2['month'], y=df2_arpu, name="yaxis2 data"),secondary_y=True,)
+# Add figure title
+df2_fig.update_layout(title_text="Double Y Axis Example")
+# Set x-axis title
+df2_fig.update_xaxes(title_text="xaxis title")
+# Set y-axes titles
+df2_fig.update_yaxes(title_text="yaxis title", secondary_y=False)
+df2_fig.update_yaxes(title_text="yaxis title", secondary_y=True)
+df2_fig.update_layout({'paper_bgcolor':colors['background'],'height':200,'plot_bgcolor':colors['background'],'margin':dict(l=30, r=0, t=0, b=20)})
+df2_fig.update_xaxes(color=colors['text'])
+df2_fig.update_yaxes(color=colors['text'])
+df2_fig.update_layout(legend=dict(font=dict(color=colors['text'])))
+
+df3 = pd.read_sql('SELECT CONVERT(int,day) as day,sum(CONVERT(int, revenue)) as revenue,sum(CONVERT(int,customer_volume))customer_volume FROM master.dbo.Sales_data group by day order by CONVERT(int,day)',cnxn)
+df3_day=df3['day']
+df3_revenue=df3['revenue']
+df3_customer_volume=df3['customer_volume']
+
+df4 = pd.read_sql('SELECT  sum(CONVERT(int, customer_volume)) as customer_volume,  REGION,OFFER FROM master.dbo.Sales_data group by REGION,OFFER',cnxn)
+a=df4['REGION']
+b=df4['OFFER']
+c=df4['customer_volume']
+fig4 = px.treemap(df4, path=[px.Constant('world'), a, b], values=c,color=c,height=200,width=400)
+fig4.update_layout({'paper_bgcolor':colors['background'], 'plot_bgcolor':colors['background'],'margin':dict(l=30, r=0, t=0, b=20)})
+fig4.update_xaxes(color=colors['text'])
+fig4.update_yaxes(color=colors['text'])
+fig4.update_layout(font=dict(color=colors['text']), legend=dict(font=dict(color=colors['text'])))
+
+
+df5 = pd.read_sql('SELECT region, CONVERT(int,customer_volume) as customer_volume,CONVERT(int, revenue) as revenue FROM master.dbo.Sales_data',cnxn)
+df5_customer_volume=df5['customer_volume']
+df5_revenue=df5['revenue']
+df5_region=df5['region']
+fig5 = px.scatter(df5, x=df5_customer_volume, y=df5_revenue, color=df5_region,height=425,width=805)
+fig5.update_layout({'paper_bgcolor':colors['background'], 'plot_bgcolor':colors['background'],'margin':dict(l=30, r=0, t=0, b=20)})
+fig5.update_xaxes(color=colors['text'])
+fig5.update_yaxes(color=colors['text'])
+fig5.update_layout(font=dict(color=colors['text']), legend=dict(font=dict(color=colors['text'])))
+
+df7 = pd.read_sql('SELECT REGION, sum(CONVERT(int,customer_volume)) as customer_volume, sum(CONVERT(int, revenue)) as revenue, "sales_channel" FROM master.dbo.Sales_data group by REGION,"sales_channel"',cnxn)
+a7=df7['REGION']
+b7=df7['sales_channel']
+c7=df7['customer_volume']
+d7=df7['revenue']
+fig7 = px.density_heatmap(df7, x=a7, y=b7, z=c7,height=200,width=400)
+fig7.update_layout({'paper_bgcolor':colors['background'], 'plot_bgcolor':colors['background'],'margin':dict(l=30, r=0, t=0, b=20)})
+fig7.update_xaxes(color=colors['text'])
+fig7.update_yaxes(color=colors['text'])
+fig7.update_layout(font=dict(color=colors['text']), legend=dict(font=dict(color=colors['text'])))
+
+
+
+df10 = pd.read_sql('SELECT len,lon, sum(CONVERT(int,customer_volume)) as customer_volume, sum(CONVERT(int, revenue)) as revenue FROM master.dbo.Sales_data group by len,lon',cnxn)
+a10=df10['len']
+b10=df10['lon']
+c10=df10['customer_volume']
+d10=df10['revenue']
+fig10 = px.scatter_mapbox(df10, lat=a10, lon=b10, color=d10, size=c10,height=500,width=1210,
+                  color_continuous_scale=px.colors.cyclical.IceFire, size_max=45, zoom=5,
+                  mapbox_style="carto-positron")
+fig10.update_layout({'paper_bgcolor':colors['background'], 'plot_bgcolor':colors['background'],'margin':dict(l=5, r=5, t=5, b=5)})
+fig10.update_xaxes(color=colors['text'])
+fig10.update_yaxes(color=colors['text'])
+fig10.update_layout(font=dict(color=colors['text']), legend=dict(font=dict(color=colors['text'])))
+
+
+
+df11 = pd.read_sql('SELECT  offer,day,yerar,sales_channel,sum(CONVERT(int,customer_volume)) as customer_volume, sum(CONVERT(int, revenue)) as revenue,region FROM master.dbo.Sales_data group by region,offer,yerar,day,sales_channel',cnxn)
+a11=df11['region']
+b11=df11['customer_volume']
+c11=df11['revenue']
+d11=df11['yerar']
+e11=df11['offer']
+f11=df11['sales_channel']
+fig11 = px.scatter(df11,
+                   x=c11,
+                   y=b11,
+                   #animation_frame=d11,
+                   #animation_group=a11,
+                   height=500,width=1210,
+                   color=e11,
+                   #hover_name=f11,
+                   facet_col=a11,
+                   #log_x=True,
+                   #size_max=45,
+                   #range_x=a11,
+                   #range_y=b11
+                   )
+fig11.update_layout({'paper_bgcolor':colors['background'], 'plot_bgcolor':colors['background'],'margin':dict(l=5, r=5, t=5, b=5)})
+fig11.update_xaxes(color=colors['text'])
+fig11.update_yaxes(color=colors['text'])
+fig11.update_layout(font=dict(color=colors['text']), legend=dict(font=dict(color=colors['text'])))
+
+
+
+
+
+
+plot_bgcolor='rgba(0,0,0,0)'
+
+
+app.layout =html.Div(
+
+    style={'background-color':'#000000',  'padding':'5px','margin':'0px','position':'relative','textAlign': 'center','color': colors['text'],'border':'0px solid white'},
+    children = [
+                        html.Div(style={'z-index':'1','padding':'0','background-color':'#000000','top':'0','position': 'fixed','left':'0px','width':'100%', 'height': '50px','border': '0px solid white'},
+                                 children=['dsfgvsdfgvdsfgsdfg']),
+                        html.Div(style={'z-index': '0', 'padding': '0', 'background-color': '#000000', 'top': '0', 'position': 'fixed',
+                        'left': '0px', 'width': '100%', 'height': '100%', 'border': '0px solid white'},
+                        children=[]),
+
+
+
+
+                        html.Div(style={'top': '0', 'position': 'relative', 'width': '100%', 'height': '40px', 'border': '0px solid white'},
+                                        children=[]),
+
+                        html.Div(style={ 'position': 'relative','background-color':'#000000',
+                                        'height':'3000px','border':'0px solid white','margin':'0'},
+                                children=[
+
+                                        html.Div(style={'background-color':colors['background'],'position': 'absolute', 'height': '20px',
+                                                    'width': '400px', 'border': '0px solid white'},
+                                        children=['ttle1']),
+
+                                        html.Div(style={'background-color':colors['background'],'left':'405px','position': 'absolute', 'height': '20px',
+                                                        'width': '400px', 'border': '0px solid white'},
+                                        children=['ttle2']),
+
+                                        html.Div(style={'background-color':colors['background'],'left':'810px','position': 'absolute', 'height': '20px',
+                                                    'width': '400px', 'border': '0px solid white'},
+                                             children=['ttle3']),
+
+                                        html.Div(style={'background-color':colors['background'],'top':'225px','position': 'absolute', 'height': '20px',
+                                                    'width': '400px', 'border': '0px solid white'},
+                                             children=['ttle4']),
+
+                                         html.Div(style={'background-color':colors['background'],'top':'225px','left': '405px', 'position': 'absolute', 'height': '20px',
+                                                    'width': '805px', 'border': '0px solid white'},
+                                             children=['ttle5']),
+
+                                         html.Div(style={'background-color':colors['background'],'top': '450px', 'left': '0px', 'position': 'absolute',
+                                                    'height': '20px',
+                                                    'width': '400px', 'border': '0px solid white'},
+                                             children=['ttle7']),
+                                    html.Div(
+                                        style={'background-color': colors['background'], 'top': '675px', 'left': '0px',
+                                               'position': 'absolute','height': '20px','width': '1210px', 'border': '0px solid white'},
+                                        children=['ttle10']),
+                                    html.Div(
+                                        style={'background-color': colors['background'], 'top': '1200px', 'left': '0px',
+                                               'position': 'absolute', 'height': '20px', 'width': '1210px',
+                                               'border': '0px solid white'},
+                                        children=['Title11']),
+
+
+
+
+                                        html.Div( style={'top':'20px',  'position':'absolute','height':'200px','width':'400px','border':'0px solid white'},
+                                                      children=[
+
+                                                          dcc.Graph(
+                                                              id='Graph1',
+                                                              figure={
+                                                                  'data': [
+
+                                                                      {'x': df_month,
+                                                                       'y': df_revenue,
+
+                                                                       'type': 'line','name': 'SF'
+                                                                       },
+
+                                                                        ],
+                                                                  'layout': {
+                                                                      'plot_bgcolor': colors['background'],
+                                                                      'paper_bgcolor': colors['background'],
+                                                                      'height': '200',
+                                                                      'xaxis': { 'title': 'month' },
+                                                                      'yaxis': {'title': 'revenue' },
+                                                                      'margin': dict(l=30, r=0, t=0, b=20),
+                                                                      'font': {
+                                                                          'color': colors['text']
+                                                                      }
+                                                                  }
+                                                              }
+                                                          )
+
+                                                      ]),
+
+
+
+                                        html.Div( style={'height':'200px','margin':'0px','padding':'0px','top':'20px', 'left':'405px','position':'relative','width':'400px','border':'0px solid white'},
+                                                      children=[
+
+                                                          dcc.Graph(
+                                                              id='graph2',
+
+                                                              figure=df2_fig
+
+                                                          )
+
+
+
+                                                      ]),
+                                        html.Div( style={'top':'20px', 'left':'810px','position':'absolute','height':'200px','width':'400px','border':'0px solid white'},
+                                                      children=[
+
+                                                          dcc.Graph(
+                                                              id='Graph3',
+                                                              figure={
+                                                                  'data': [
+                                                                      {'x':df3_day ,
+                                                                       'y':df3_revenue , 'type': 'line',
+                                                                       'name': 'Revenue'},
+                                                                      {'x':df3_day ,
+                                                                       'y':df3_customer_volume ,
+                                                                       'type': 'bar',
+                                                                       'name': u'Volume'},
+                                                                  ],
+                                                                  'layout': {
+                                                                      'plot_bgcolor': colors['background'],
+                                                                      'paper_bgcolor': colors['background'],
+                                                                      'height': '200',
+                                                                      'xaxis': {'title': 'revenue'},
+                                                                      'yaxis': {'title': 'volume'},
+                                                                      'margin': dict(l=40, r=0, t=0, b=40),
+                                                                      'font': {
+                                                                          'color': colors['text']
+                                                                      }
+                                                                  }
+                                                              }
+                                                          )
+
+                                                      ]),
+
+
+
+
+
+                                        html.Div(style={'top': '245px', 'left': '0px', 'position': 'absolute',
+                                                    'height': '200px', 'width': '400px', 'border': '0px solid white'},
+                                             children=[
+
+                                                 dcc.Graph(
+                                                     id='graph4',
+
+                                                     figure=fig4
+
+                                                 )
+
+                                        ]),
+
+                                    html.Div(
+                                        style={'height': '430px', 'margin': '0px', 'padding': '0px', 'top': '245px',
+                                               'left': '405px', 'position': 'absolute', 'width': '805px',
+                                               'border': '0px solid white'},
+                                        children=[
+
+
+                                             dcc.Graph(id='my-graph5',figure=fig5)
+
+
+                                            ]),
+
+
+                                    html.Div(style={'top': '470px', 'left': '0px', 'position': 'absolute',
+                                                    'height': '200px', 'width': '400px', 'border': '0px solid white'},
+                                             children=[
+
+                                                 dcc.Graph(id='my-graph7', figure=fig7)
+
+                                             ]),
+
+                                    html.Div(style={'top': '695px', 'left': '0px', 'position': 'absolute',
+                                                    'height': '500px', 'width': '1210px', 'border': '0px solid white'},
+                                             children=[
+
+                                                 dcc.Graph(id='my-graph10', figure=fig10)
+
+                                             ]),
+
+                                    html.Div(style={'top': '1220px', 'left': '0px', 'position': 'absolute',
+                                                    'height': '500px', 'width': '1210px', 'border': '0px solid white'},
+                                             children=[
+
+                                                 dcc.Graph(id='my-graph11', figure=fig11)
+
+                                             ]),
+
+
+
+                                ])
+])
+
+
+
+
+
+# Run the app
+if __name__ == '__main__':
+    app.run_server(debug=True)
+
+
